@@ -1,16 +1,23 @@
 <?php
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/smb.php';
 
 $filename = basename($_GET['file'] ?? '');
-$filepath = $PDF_FOLDER . DIRECTORY_SEPARATOR . $filename;
-
-// Serve only PDFs that exist
-if (file_exists($filepath) && strtolower(pathinfo($filepath, PATHINFO_EXTENSION)) === 'pdf') {
-    header('Content-Type: application/pdf');
-    header('Content-Disposition: inline; filename="' . $filename . '"');
-    readfile($filepath);
-    exit;
+if ($filename === '' || strtolower(pathinfo($filename, PATHINFO_EXTENSION)) !== 'pdf') {
+    http_response_code(400);
+    exit('Invalid file.');
 }
 
-http_response_code(404);
-echo "File not found or invalid.";
+$PDF_FOLDER = smb_ensure_and_get_folder();
+$filepath   = $PDF_FOLDER . DIRECTORY_SEPARATOR . $filename;
+
+if (!is_file($filepath)) {
+    http_response_code(404);
+    exit('File not found.');
+}
+
+// Serve inline
+header('Content-Type: application/pdf');
+header('Content-Disposition: inline; filename="' . $filename . '"');
+header('Content-Transfer-Encoding: binary');
+header('Accept-Ranges: bytes');
+readfile($filepath);
